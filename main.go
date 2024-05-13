@@ -27,9 +27,9 @@ func main() {
 
 	// let multiplexer handle specific endpoints for...
 	// on HEALTHZ endpoint call, return readiness status
-	serveMux.HandleFunc(HEALTHZ, healthzHandler)
+	serveMux.HandleFunc("GET "+HEALTHZ, healthzHandler)
 	// on METRICS endpoint call, return visitor count
-	serveMux.HandleFunc(METRICS, apiCfg.metricsHandler)
+	serveMux.HandleFunc("GET "+METRICS, apiCfg.metricsHandler)
 	// on RESET endpoint call, reset visitor count
 	serveMux.HandleFunc(RESET, apiCfg.metricsResetHandler)
 
