@@ -6,11 +6,16 @@ import (
 )
 
 const (
-	ROOT_PATH string = "."
-	PORT      string = "8080"
-	HEALTHZ   string = "/healthz"
-	METRICS   string = "/metrics"
-	RESET     string = "/reset"
+	FILE_ROOT_PATH   string = "."
+	FILE_SERVER_PATH string = "/app/*"
+	PORT             string = "8080"
+	HEALTHZ          string = "/api/healthz"
+	METRICS          string = "/api/metrics"
+	RESET            string = "/api/reset"
+)
+
+const (
+	GET string = "GET "
 )
 
 func main() {
@@ -23,13 +28,13 @@ func main() {
 	serveMux := http.NewServeMux()
 
 	// define file server
-	serveMux.Handle("/app/*", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(ROOT_PATH)))))
+	serveMux.Handle(FILE_SERVER_PATH, apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(FILE_ROOT_PATH)))))
 
 	// let multiplexer handle specific endpoints for...
 	// on HEALTHZ endpoint call, return readiness status
-	serveMux.HandleFunc("GET "+HEALTHZ, healthzHandler)
+	serveMux.HandleFunc(GET+HEALTHZ, healthzHandler)
 	// on METRICS endpoint call, return visitor count
-	serveMux.HandleFunc("GET "+METRICS, apiCfg.metricsHandler)
+	serveMux.HandleFunc(GET+METRICS, apiCfg.metricsHandler)
 	// on RESET endpoint call, reset visitor count
 	serveMux.HandleFunc(RESET, apiCfg.metricsResetHandler)
 
@@ -40,7 +45,7 @@ func main() {
 	}
 
 	// log info before server start
-	log.Printf("Serving Yo Mama from %s on port: %s\n", ROOT_PATH, PORT)
+	log.Printf("Serving Yo Mama from %s on port: %s\n", FILE_ROOT_PATH, PORT)
 	// log fatal errors and start server
 	log.Fatal(httpServer.ListenAndServe())
 }
