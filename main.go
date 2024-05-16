@@ -6,16 +6,18 @@ import (
 )
 
 const (
-	FILE_ROOT_PATH   string = "."
-	FILE_SERVER_PATH string = "/app/*"
-	PORT             string = "8080"
-	HEALTHZ          string = "/api/healthz"
-	RESET            string = "/api/reset"
-	METRICS          string = "/admin/metrics"
+	PORT               string = "8080"
+	FILE_ROOT_PATH     string = "."
+	FILE_SERVER_PATH   string = "/app/*"
+	API_VALIDATE_CHIRP string = "/api/validate_chirp"
+	API_HEALTHZ        string = "/api/healthz"
+	API_RESET          string = "/api/reset"
+	ADMIN_METRICS      string = "/admin/metrics"
 )
 
 const (
-	GET string = "GET "
+	GET  string = "GET "
+	POST string = "POST "
 )
 
 func main() {
@@ -32,11 +34,13 @@ func main() {
 
 	// let multiplexer handle specific endpoints for...
 	// on HEALTHZ endpoint call, return readiness status
-	serveMux.HandleFunc(GET+HEALTHZ, healthzHandler)
+	serveMux.HandleFunc(GET+API_HEALTHZ, healthzHandler)
 	// on METRICS endpoint call, return visitor count
-	serveMux.HandleFunc(GET+METRICS, apiCfg.metricsHandler)
+	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)
 	// on RESET endpoint call, reset visitor count
-	serveMux.HandleFunc(RESET, apiCfg.metricsResetHandler)
+	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler)
+	// on VALIDATE_CHIRP call, response with json
+	serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler)
 
 	// create http.Server object
 	httpServer := &http.Server{
