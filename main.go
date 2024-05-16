@@ -10,8 +10,8 @@ const (
 	FILE_SERVER_PATH string = "/app/*"
 	PORT             string = "8080"
 	HEALTHZ          string = "/api/healthz"
-	METRICS          string = "/api/metrics"
 	RESET            string = "/api/reset"
+	METRICS          string = "/admin/metrics"
 )
 
 const (

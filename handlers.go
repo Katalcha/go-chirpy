@@ -16,9 +16,9 @@ func healthzHandler(writer http.ResponseWriter, request *http.Request) {
 // handler to be used with serveMux.HandleFunc()
 // this handler returns a response with state of visitors
 func (a *apiConfig) metricsHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("content-Type", "text/plain; charset=utf-8")
+	writer.Header().Add("content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
-	writer.Write([]byte(fmt.Sprintf("Hits: %d", a.fileServerHits)))
+	writer.Write([]byte(fmt.Sprintf("<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %d times!</p></body></html>", a.fileServerHits)))
 }
 
 // handler to be used with serveMux.HandleFunc()
