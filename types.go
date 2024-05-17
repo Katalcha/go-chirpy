@@ -1,13 +1,14 @@
 package main
 
-type chirpType struct {
-	Body string `json:"body"`
-}
-
 type returnVals struct {
 	CleanedBody string `json:"cleaned_body"`
 }
 
 type errorResponse struct {
 	Error string `json:"error"`
+}
+
+type Chirp struct {
+	ID   int    `json:"id"`
+	Body string `json:"body"`
 }

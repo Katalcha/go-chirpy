@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/Katalcha/go-chirpy/internal/database"
 )
 
 const (
@@ -12,6 +14,7 @@ const (
 	API_VALIDATE_CHIRP string = "/api/validate_chirp"
 	API_HEALTHZ        string = "/api/healthz"
 	API_RESET          string = "/api/reset"
+	API_CHIRPS         string = "/api/chirps"
 	ADMIN_METRICS      string = "/admin/metrics"
 )
 
@@ -21,24 +24,38 @@ const (
 )
 
 func main() {
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// create apiConfig state object
-	apiCfg := apiConfig{fileServerHits: 0}
+	apiCfg := apiConfig{
+		fileServerHits: 0,
+		DB:             db,
+	}
 
 	// create http server multiplexer
 	serveMux := http.NewServeMux()
 
 	// define file server
-	serveMux.Handle(FILE_SERVER_PATH, apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(FILE_ROOT_PATH)))))
+	fileServerHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(FILE_ROOT_PATH))))
+	serveMux.Handle(FILE_SERVER_PATH, fileServerHandler)
 
 	// let multiplexer handle specific endpoints for...
 	// on HEALTHZ endpoint call, return readiness status
 	serveMux.HandleFunc(GET+API_HEALTHZ, healthzHandler)
-	// on METRICS endpoint call, return visitor count
-	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)
 	// on RESET endpoint call, reset visitor count
 	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler)
+
+	serveMux.HandleFunc(POST+API_CHIRPS, apiCfg.createChirpHandler)
+	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.retrieveChirpHandler)
+
 	// on VALIDATE_CHIRP call, response with json
 	serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler)
+
+	// on METRICS endpoint call, return visitor count
+	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)
 
 	// create http.Server object
 	httpServer := &http.Server{

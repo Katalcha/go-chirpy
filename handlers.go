@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 )
 
 // handler to be used with serveMux.HandleFunc()
@@ -27,7 +28,7 @@ func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
 		"fornax":    {},
 	}
 	// set up struct to fit decoded info into
-	chirp := chirpType{}
+	chirp := Chirp{}
 
 	// set up decoder
 	decoder := json.NewDecoder(request.Body)
@@ -77,4 +78,53 @@ func (a *apiConfig) metricsResetHandler(writer http.ResponseWriter, request *htt
 	a.fileServerHits = 0
 	writer.WriteHeader(http.StatusOK)
 	writer.Write([]byte(fmt.Sprintf("Hits reset to %d", a.fileServerHits)))
+}
+
+func (a *apiConfig) createChirpHandler(writer http.ResponseWriter, request *http.Request) {
+	chirp := Chirp{}
+	decoder := json.NewDecoder(request.Body)
+	err := decoder.Decode(&chirp)
+	if err != nil {
+		respondWithError(writer, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	filtered, err := validateChirp(chirp.Body)
+	if err != nil {
+		respondWithError(writer, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	newChirp, err := a.DB.CreateChirp(filtered)
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, "Could not create chirp")
+		return
+	}
+
+	respondWithJSON(writer, http.StatusCreated, Chirp{
+		ID:   newChirp.ID,
+		Body: newChirp.Body,
+	})
+}
+
+func (a *apiConfig) retrieveChirpHandler(writer http.ResponseWriter, _ *http.Request) {
+	dbChirps, err := a.DB.GetChirps()
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, "Could not retrieve chirps from database")
+		return
+	}
+
+	chirps := []Chirp{}
+	for _, dbChirp := range dbChirps {
+		chirps = append(chirps, Chirp{
+			ID:   dbChirp.ID,
+			Body: dbChirp.Body,
+		})
+	}
+
+	sort.Slice(chirps, func(i, j int) bool {
+		return chirps[i].ID < chirps[j].ID
+	})
+
+	respondWithJSON(writer, http.StatusOK, chirps)
 }

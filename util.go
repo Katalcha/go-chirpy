@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -40,4 +41,20 @@ func replaceBadWords(inputString string, badWords map[string]struct{}) string {
 
 	output := strings.Join(splittedInput, " ")
 	return output
+}
+
+func validateChirp(body string) (string, error) {
+	const maxChirp int = 140
+	if len(body) > maxChirp {
+		return "", errors.New("Chirp is too long")
+	}
+
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+
+	filtered := replaceBadWords(body, badWords)
+	return filtered, nil
 }
