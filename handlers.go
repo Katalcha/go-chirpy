@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -19,89 +18,48 @@ func healthzHandler(writer http.ResponseWriter, request *http.Request) {
 // this handler returns a json response, if incoming POST request is valid
 // sends json error msg otherwise
 func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
-	const maxChirp = 140
-
-	type chirpType struct {
-		Body string `json:"body"`
+	// maximum characters per chirp
+	const maxChirp int = 140
+	// bad words filter list
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
 	}
-
-	type returnVals struct {
-		Valid bool `json:"valid"`
-	}
-
-	type errorResponse struct {
-		Error string `json:"error"`
-	}
-
-	// set up decoder
-	decoder := json.NewDecoder(request.Body)
-
 	// set up struct to fit decoded info into
 	chirp := chirpType{}
 
+	// set up decoder
+	decoder := json.NewDecoder(request.Body)
 	// decode info into struct, save status in err
 	err := decoder.Decode(&chirp)
 
 	// if the request-body could not be decoded -> prepare error
 	if err != nil {
-		data, err := json.Marshal(errorResponse{Error: "Could not decode Message"})
-		// if the error itself is broken
-		if err != nil {
-			log.Printf("Error marshalling JSON: %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write(data)
+		// respond with error
+		respondWithError(writer, http.StatusInternalServerError, "Could not decode Message")
 		return
 	}
 
 	// if the request-body is too long -> prepare error
 	if len(chirp.Body) > maxChirp {
-		data, err := json.Marshal(errorResponse{Error: "Chirp is too long"})
-		// if the error itself is broken
-		if err != nil {
-			log.Printf("Error marshalling JSON %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		writer.Write(data)
+		// respond with error
+		respondWithError(writer, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
 
-	// if the request-body lacks a body field
+	// if the request-body lacks a body field -> prepare error
 	if chirp.Body == "" {
-		data, err := json.Marshal(errorResponse{Error: "Missing 'body field in JSON"})
-		if err != nil {
-			log.Printf("Error marshalling JSON %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		writer.Write(data)
+		// respond with error
+		respondWithError(writer, http.StatusBadRequest, "Empty body field or missing body field in JSON")
 		return
 	}
 
 	// if the request-body is valid
-	// encode json answer for response
-	data, err := json.Marshal(returnVals{Valid: true})
-	// if json answer itself is broken
-	if err != nil {
-		log.Printf("Error marshalling JSON %s", err)
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	writer.Write(data)
+	// filter for bad words und replace them
+	filteredBody := replaceBadWords(chirp.Body, badWords)
+	// respond with JSON
+	respondWithJSON(writer, http.StatusOK, returnVals{CleanedBody: filteredBody})
 }
 
 // handler to be used with serveMux.HandleFunc()

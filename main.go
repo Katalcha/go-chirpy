@@ -22,9 +22,7 @@ const (
 
 func main() {
 	// create apiConfig state object
-	apiCfg := apiConfig{
-		fileServerHits: 0,
-	}
+	apiCfg := apiConfig{fileServerHits: 0}
 
 	// create http server multiplexer
 	serveMux := http.NewServeMux()
