@@ -16,15 +16,24 @@ type DB struct {
 	mu   *sync.RWMutex
 }
 
-// represents the contents of DB as map of Chirps
+// represents the contents of DB as map of Chirps and map of Users
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 // represents a Chirp as part of the map of Chirps inside DB
+// A Chirp consists of an ID int and a Body string
 type Chirp struct {
 	ID   int    `json:"id"`
 	Body string `json:"body"`
+}
+
+// represents a User as part of the map of Users inside DB
+// a User consists of an ID int and an Email string
+type User struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
 }
 
 /*
@@ -36,6 +45,10 @@ type Chirp struct {
 		"chirps": {	<-- DBStructure.Chirps map[int]string
 			"1": { id: 1, body: "blabla" },		<-- Chirp struct
 			"2": { id: 2, body: "blublub" },	<-- Chirp struct
+		},
+		"users" : { <-- DBStructure.Users map[int]string
+			"1": { id: 1, email: "blabla@blub.com" },
+			"2": { id: 2, email: "blubblub@bla.com" },
 		}
 	}
 */
@@ -55,6 +68,7 @@ func (db *DB) ensureDB() error {
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{
 		Chirps: map[int]Chirp{},
+		Users:  map[int]User{},
 	}
 	return db.writeDB(dbStructure)
 }
@@ -156,6 +170,57 @@ func (db *DB) GetChirpByID(id int) (Chirp, error) {
 	}
 
 	return chirp, nil
+}
+
+func (db *DB) GetUserByID(id int) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStructure.Users[id]
+	if !ok {
+		return User{}, ErrNotExist
+	}
+
+	return user, nil
+}
+
+// USER IN DB
+
+func (db *DB) CreateUser(email string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	id := len(dbStructure.Users) + 1
+	user := User{
+		ID:    id,
+		Email: email,
+	}
+	dbStructure.Users[id] = user
+
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+
+func (db *DB) GetUsers() ([]User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]User, 0, len(dbStructure.Users))
+	for _, user := range dbStructure.Users {
+		users = append(users, user)
+	}
+
+	return users, nil
 }
 
 // NEW DB FOR IN-MEMORY ON SERVER START
