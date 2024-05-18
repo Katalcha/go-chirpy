@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 )
 
 // handler to be used with serveMux.HandleFunc()
@@ -107,7 +108,7 @@ func (a *apiConfig) createChirpHandler(writer http.ResponseWriter, request *http
 	})
 }
 
-func (a *apiConfig) retrieveChirpHandler(writer http.ResponseWriter, _ *http.Request) {
+func (a *apiConfig) retrieveChirpsHandler(writer http.ResponseWriter, _ *http.Request) {
 	dbChirps, err := a.DB.GetChirps()
 	if err != nil {
 		respondWithError(writer, http.StatusInternalServerError, "Could not retrieve chirps from database")
@@ -127,4 +128,25 @@ func (a *apiConfig) retrieveChirpHandler(writer http.ResponseWriter, _ *http.Req
 	})
 
 	respondWithJSON(writer, http.StatusOK, chirps)
+}
+
+func (a *apiConfig) getChirpByIdHandler(w http.ResponseWriter, r *http.Request) {
+	const matchingPattern string = "chirpID"
+	chirpIDString := r.PathValue(matchingPattern)
+	chirpID, err := strconv.Atoi(chirpIDString)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Chirp ID")
+		return
+	}
+
+	dbChirp, err := a.DB.GetChirpByID(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "No chirp found in database")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, Chirp{
+		ID:   dbChirp.ID,
+		Body: dbChirp.Body,
+	})
 }

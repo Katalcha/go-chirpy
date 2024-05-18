@@ -15,6 +15,7 @@ const (
 	API_HEALTHZ        string = "/api/healthz"
 	API_RESET          string = "/api/reset"
 	API_CHIRPS         string = "/api/chirps"
+	API_CHIRPS_ID      string = "/api/chirps/{chirpID}"
 	ADMIN_METRICS      string = "/admin/metrics"
 )
 
@@ -30,10 +31,7 @@ func main() {
 	}
 
 	// create apiConfig state object
-	apiCfg := apiConfig{
-		fileServerHits: 0,
-		DB:             db,
-	}
+	apiCfg := apiConfig{fileServerHits: 0, DB: db}
 
 	// create http server multiplexer
 	serveMux := http.NewServeMux()
@@ -49,13 +47,15 @@ func main() {
 	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler)
 
 	serveMux.HandleFunc(POST+API_CHIRPS, apiCfg.createChirpHandler)
-	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.retrieveChirpHandler)
+	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.retrieveChirpsHandler)
 
 	// on VALIDATE_CHIRP call, response with json
 	serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler)
 
 	// on METRICS endpoint call, return visitor count
 	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)
+
+	serveMux.HandleFunc(GET+API_CHIRPS_ID, apiCfg.getChirpByIdHandler)
 
 	// create http.Server object
 	httpServer := &http.Server{

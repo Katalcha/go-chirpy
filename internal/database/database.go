@@ -8,6 +8,8 @@ import (
 	"syscall"
 )
 
+var ErrNotExist = errors.New("resource does not exist")
+
 // represents the DB itself
 type DB struct {
 	path string
@@ -142,7 +144,19 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirps, nil
 }
 
-// EXPORT
+func (db *DB) GetChirpByID(id int) (Chirp, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	chirp, ok := dbStructure.Chirps[id]
+	if !ok {
+		return Chirp{}, ErrNotExist
+	}
+
+	return chirp, nil
+}
 
 // NEW DB FOR IN-MEMORY ON SERVER START
 func NewDB(path string) (*DB, error) {
