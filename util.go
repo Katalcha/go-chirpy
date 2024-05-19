@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -57,4 +58,16 @@ func validateChirp(body string) (string, error) {
 
 	filtered := replaceBadWords(body, badWords)
 	return filtered, nil
+}
+
+func debugDeleteDatabase(databasePath string) error {
+	err := os.Remove(databasePath)
+	if err != nil {
+		return errors.New("no database to delete")
+	}
+	_, err = os.ReadFile(databasePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }

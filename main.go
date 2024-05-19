@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -9,8 +10,10 @@ import (
 
 // SERVER CONFIG
 const (
-	PORT           string = "8080"
-	FILE_ROOT_PATH string = "."
+	LOCALHOST          string = "localhost"
+	PORT               string = "8080"
+	FILE_ROOT_PATH     string = "."
+	FILE_DATABASE_PATH string = "database.json"
 )
 
 // ENDPOINTS
@@ -37,8 +40,15 @@ const (
 )
 
 func main() {
+	// flag parsing for --debug, to delete database.json programatically
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *dbg {
+		debugDeleteDatabase(FILE_DATABASE_PATH)
+	}
+
 	// reads or creates a ne DB ob server start, by checking for JSON-DB
-	db, err := database.NewDB("database.json")
+	db, err := database.NewDB(FILE_DATABASE_PATH)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,16 +70,16 @@ func main() {
 	serveMux.HandleFunc(GET+API_CHIRPS_ID, apiCfg.getChirpByIdHandler) // gets a specific chirp in database by id on GET /api/chirps/{chirpID}
 	serveMux.HandleFunc(POST+API_CHIRPS, apiCfg.createChirpHandler)    // posts a new chirp with inbund validation on POST /api/chirps
 
-	serveMux.HandleFunc(GET+API_USERS, apiCfg.getUsersHandler)       // WIP: gets all users in database on GET /api/users
-	serveMux.HandleFunc(GET+API_USERS_ID, apiCfg.getUserByIdHandler) // WIP: gets a specific user in database by id on GET /api/users/{userID}
-	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler)    // WIP: creates a new user on POST /api/users
+	serveMux.HandleFunc(GET+API_USERS, apiCfg.getUsersHandler)       // gets all users in database on GET /api/users
+	serveMux.HandleFunc(GET+API_USERS_ID, apiCfg.getUserByIdHandler) // gets a specific user in database by id on GET /api/users/{userID}
+	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler)    // creates a new user on POST /api/users
 
 	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)      // get visitor count metrics on GET /admin/metrics
 	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler)     // resets visitor cound metrics on GET /api/reset
 	serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler) // old: validiates a posted chirp on structure and profanity on POST /api/validate_chirp
 
 	// create http.Server object with configured serveMux
-	httpServer := &http.Server{Addr: "localhost:" + PORT, Handler: serveMux}
+	httpServer := &http.Server{Addr: LOCALHOST + ":" + PORT, Handler: serveMux}
 
 	// log info, start server, inform on fatal or close
 	log.Printf("Serving Yo Mama from %s on port: %s\n", FILE_ROOT_PATH, PORT)
