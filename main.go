@@ -74,9 +74,9 @@ func main() {
 	serveMux.HandleFunc(GET+API_USERS_ID, apiCfg.getUserByIdHandler) // gets a specific user in database by id on GET /api/users/{userID}
 	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler)    // creates a new user on POST /api/users
 
-	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)      // get visitor count metrics on GET /admin/metrics
-	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler)     // resets visitor cound metrics on GET /api/reset
-	serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler) // old: validiates a posted chirp on structure and profanity on POST /api/validate_chirp
+	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)  // get visitor count metrics on GET /admin/metrics
+	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler) // resets visitor cound metrics on GET /api/reset
+	// serveMux.HandleFunc(POST+API_VALIDATE_CHIRP, validateChirpHandler) // old: validiates a posted chirp on structure and profanity on POST /api/validate_chirp
 
 	// create http.Server object with configured serveMux
 	httpServer := &http.Server{Addr: LOCALHOST + ":" + PORT, Handler: serveMux}

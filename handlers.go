@@ -19,50 +19,50 @@ func healthzHandler(writer http.ResponseWriter, request *http.Request) {
 // handler to be used with serveMux.HandleFunc()
 // this handler returns a json response, if incoming POST request is valid
 // sends json error msg otherwise
-func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
-	// maximum characters per chirp
-	const maxChirp int = 140
-	// bad words filter list
-	badWords := map[string]struct{}{
-		"kerfuffle": {},
-		"sharbert":  {},
-		"fornax":    {},
-	}
-	// set up struct to fit decoded info into
-	chirp := Chirp{}
+// func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
+// 	// maximum characters per chirp
+// 	const maxChirp int = 140
+// 	// bad words filter list
+// 	badWords := map[string]struct{}{
+// 		"kerfuffle": {},
+// 		"sharbert":  {},
+// 		"fornax":    {},
+// 	}
+// 	// set up struct to fit decoded info into
+// 	chirp := Chirp{}
 
-	// set up decoder
-	decoder := json.NewDecoder(request.Body)
-	// decode info into struct, save status in err
-	err := decoder.Decode(&chirp)
+// 	// set up decoder
+// 	decoder := json.NewDecoder(request.Body)
+// 	// decode info into struct, save status in err
+// 	err := decoder.Decode(&chirp)
 
-	// if the request-body could not be decoded -> prepare error
-	if err != nil {
-		// respond with error
-		respondWithError(writer, http.StatusInternalServerError, "Could not decode Message")
-		return
-	}
+// 	// if the request-body could not be decoded -> prepare error
+// 	if err != nil {
+// 		// respond with error
+// 		respondWithError(writer, http.StatusInternalServerError, "Could not decode Message")
+// 		return
+// 	}
 
-	// if the request-body is too long -> prepare error
-	if len(chirp.Body) > maxChirp {
-		// respond with error
-		respondWithError(writer, http.StatusBadRequest, "Chirp is too long")
-		return
-	}
+// 	// if the request-body is too long -> prepare error
+// 	if len(chirp.Body) > maxChirp {
+// 		// respond with error
+// 		respondWithError(writer, http.StatusBadRequest, "Chirp is too long")
+// 		return
+// 	}
 
-	// if the request-body lacks a body field -> prepare error
-	if chirp.Body == "" {
-		// respond with error
-		respondWithError(writer, http.StatusBadRequest, "Empty body field or missing body field in JSON")
-		return
-	}
+// 	// if the request-body lacks a body field -> prepare error
+// 	if chirp.Body == "" {
+// 		// respond with error
+// 		respondWithError(writer, http.StatusBadRequest, "Empty body field or missing body field in JSON")
+// 		return
+// 	}
 
-	// if the request-body is valid
-	// filter for bad words und replace them
-	filteredBody := replaceBadWords(chirp.Body, badWords)
-	// respond with JSON
-	respondWithJSON(writer, http.StatusOK, returnVals{CleanedBody: filteredBody})
-}
+// 	// if the request-body is valid
+// 	// filter for bad words und replace them
+// 	filteredBody := replaceBadWords(chirp.Body, badWords)
+// 	// respond with JSON
+// 	respondWithJSON(writer, http.StatusOK, returnVals{CleanedBody: filteredBody})
+// }
 
 // handler to be used with serveMux.HandleFunc()
 // this handler returns a response with state of visitors

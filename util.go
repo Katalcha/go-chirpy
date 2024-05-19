@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
@@ -70,4 +72,13 @@ func debugDeleteDatabase(databasePath string) error {
 		return err
 	}
 	return nil
+}
+
+func hashThisPw(pw string) ([]byte, error) {
+	hashedPw, err := bcrypt.GenerateFromPassword([]byte(pw), 10)
+	if err != nil {
+		log.Printf("hashing password failed")
+		return nil, errors.New("hasing password failed")
+	}
+	return hashedPw, nil
 }
