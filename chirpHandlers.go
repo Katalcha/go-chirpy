@@ -9,6 +9,11 @@ import (
 	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
+type Chirp struct {
+	ID   int    `json:"id"`
+	Body string `json:"body"`
+}
+
 func (a *apiConfig) createChirpHandler(writer http.ResponseWriter, request *http.Request) {
 	chirp := Chirp{}
 	decoder := json.NewDecoder(request.Body)
@@ -36,7 +41,22 @@ func (a *apiConfig) createChirpHandler(writer http.ResponseWriter, request *http
 	})
 }
 
-func (a *apiConfig) retrieveChirpsHandler(writer http.ResponseWriter, _ *http.Request) {
+// func validateChirp(body string) (string, error) {
+// 	const maxChirpLength = 140
+// 	if len(body) > maxChirpLength {
+// 		return "", errors.New("Chirp is too long")
+// 	}
+
+// 	badWords := map[string]struct{}{
+// 		"kerfuffle": {},
+// 		"sharbert":  {},
+// 		"fornax":    {},
+// 	}
+// 	cleaned := utils.ReplaceBadWords(body, badWords)
+// 	return cleaned, nil
+// }
+
+func (a *apiConfig) getChirpsHandler(writer http.ResponseWriter, _ *http.Request) {
 	dbChirps, err := a.DB.GetChirps()
 	if err != nil {
 		utils.RespondWithError(writer, http.StatusInternalServerError, "Could not retrieve chirps from database")

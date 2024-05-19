@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type errorResponse struct {
@@ -76,13 +74,4 @@ func DebugDeleteDatabase(databasePath string) error {
 		return err
 	}
 	return nil
-}
-
-func HashThisPw(pw string) ([]byte, error) {
-	hashedPw, err := bcrypt.GenerateFromPassword([]byte(pw), 10)
-	if err != nil {
-		log.Printf("hashing password failed")
-		return nil, errors.New("hasing password failed")
-	}
-	return hashedPw, nil
 }

@@ -6,8 +6,6 @@ import (
 	"os"
 	"sync"
 	"syscall"
-
-	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
 var ErrNotExist = errors.New("resource does not exist")
@@ -24,21 +22,6 @@ type DBStructure struct {
 	Users  map[int]User  `json:"users"`
 }
 
-// represents a Chirp as part of the map of Chirps inside DB
-// A Chirp consists of an ID int and a Body string
-type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
-}
-
-// represents a User as part of the map of Users inside DB
-// a User consists of an ID int and an Email string
-type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password []byte `json:"password"`
-}
-
 /*
 	DB STRUCT AS SAVED FILE ON DISK:
 	FILE PATH: "path/to/file/database.json"
@@ -50,11 +33,21 @@ type User struct {
 			"2": { id: 2, body: "blublub" },	<-- Chirp struct
 		},
 		"users" : { <-- DBStructure.Users map[int]string
-			"1": { id: 1, email: "blabla@blub.com" },
-			"2": { id: 2, email: "blubblub@bla.com" },
+			"1": { id: 1, email: "blabla@blub.com", password: <hash> },
+			"2": { id: 2, email: "blubblub@bla.com", password: <hash> },
 		}
 	}
 */
+
+// NEW DB FOR IN-MEMORY ON SERVER START
+func NewDB(path string) (*DB, error) {
+	db := &DB{
+		path: path,
+		mu:   &sync.RWMutex{},
+	}
+	err := db.ensureDB()
+	return db, err
+}
 
 // Ensures if a JSON-DB is present or not by reading DB.path.
 // If err is nil, a JSON-DB was found, otherwise calls DB.createDB()
@@ -74,6 +67,14 @@ func (db *DB) createDB() error {
 		Users:  map[int]User{},
 	}
 	return db.writeDB(dbStructure)
+}
+
+func (db *DB) ResetDB() error {
+	err := os.Remove(db.path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return db.ensureDB()
 }
 
 // Writes JSON-DB content to provided DBStructure by
@@ -115,127 +116,4 @@ func (db *DB) loadDB() (DBStructure, error) {
 		return dbStructure, err
 	}
 	return dbStructure, nil
-}
-
-// CHIRP IN DB
-
-// Creates a Chirp by loading the whole JSON-DB in-memory,
-// determine and setting Chirp.ID by incrementing the length of all
-// saved Chirps by 1, setting Chirp.Body with provided string,
-// add new Chirp to in-memory DBStructure.Chirps and
-// write the updated in-memory JSON-DB back to disk via DB.writeDB()
-func (db *DB) CreateChirp(body string) (Chirp, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	id := len(dbStructure.Chirps) + 1
-	chirp := Chirp{
-		ID:   id,
-		Body: body,
-	}
-	dbStructure.Chirps[id] = chirp
-
-	err = db.writeDB(dbStructure)
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	return chirp, nil
-}
-
-// Reads all Chirps in JSON-DB by loading the whole DB in-memory
-// and append all Chirps in a []Chirp Slice
-func (db *DB) GetChirps() ([]Chirp, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return nil, err
-	}
-
-	chirps := make([]Chirp, 0, len(dbStructure.Chirps))
-	for _, chirp := range dbStructure.Chirps {
-		chirps = append(chirps, chirp)
-	}
-
-	return chirps, nil
-}
-
-func (db *DB) GetChirpByID(id int) (Chirp, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	chirp, ok := dbStructure.Chirps[id]
-	if !ok {
-		return Chirp{}, ErrNotExist
-	}
-
-	return chirp, nil
-}
-
-func (db *DB) GetUserByID(id int) (User, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	user, ok := dbStructure.Users[id]
-	if !ok {
-		return User{}, ErrNotExist
-	}
-
-	return user, nil
-}
-
-// USER IN DB
-
-func (db *DB) CreateUser(email string, password string) (User, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	pw, err := utils.HashThisPw(password)
-	if err != nil {
-		return User{}, err
-	}
-	id := len(dbStructure.Users) + 1
-	user := User{
-		ID:       id,
-		Email:    email,
-		Password: pw,
-	}
-	dbStructure.Users[id] = user
-	err = db.writeDB(dbStructure)
-	if err != nil {
-		return User{}, err
-	}
-
-	return user, nil
-}
-
-func (db *DB) GetUsers() ([]User, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return nil, err
-	}
-
-	users := make([]User, 0, len(dbStructure.Users))
-	for _, user := range dbStructure.Users {
-		users = append(users, user)
-	}
-
-	return users, nil
-}
-
-// NEW DB FOR IN-MEMORY ON SERVER START
-func NewDB(path string) (*DB, error) {
-	db := &DB{
-		path: path,
-		mu:   &sync.RWMutex{},
-	}
-	err := db.ensureDB()
-	return db, err
 }

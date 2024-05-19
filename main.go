@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/Katalcha/go-chirpy/internal/database"
-	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
 // SERVER CONFIG
@@ -30,6 +29,8 @@ const (
 	API_USERS    string = "/api/users"
 	API_USERS_ID string = "/api/users/{userID}"
 
+	API_LOGIN string = "/api/login"
+
 	ADMIN_METRICS string = "/admin/metrics"
 	API_RESET     string = "/api/reset"
 )
@@ -40,18 +41,28 @@ const (
 	POST string = "POST "
 )
 
-func main() {
-	// flag parsing for --debug, to delete database.json programatically
-	dbg := flag.Bool("debug", false, "Enable debug mode")
-	flag.Parse()
-	if *dbg {
-		utils.DebugDeleteDatabase(FILE_DATABASE_PATH)
-	}
+// intern config struct to hold state
+// fileServerHits - tracks the visitor count
+type apiConfig struct {
+	fileServerHits int
+	DB             *database.DB
+}
 
+func main() {
 	// reads or creates a ne DB ob server start, by checking for JSON-DB
 	db, err := database.NewDB(FILE_DATABASE_PATH)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// flag parsing for --debug, to delete database.json programatically
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if dbg != nil && *dbg {
+		err := db.ResetDB()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// create apiConfig for serverMetrics and in-memory DB
@@ -67,13 +78,14 @@ func main() {
 	// let multiplexer handle specific endpoints
 	serveMux.HandleFunc(GET+API_HEALTHZ, healthzHandler) // get readiness on GET /api/healthz
 
-	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.retrieveChirpsHandler)  // gets all chirps in database on GET /api/chirps
-	serveMux.HandleFunc(GET+API_CHIRPS_ID, apiCfg.getChirpByIdHandler) // gets a specific chirp in database by id on GET /api/chirps/{chirpID}
+	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.getChirpsHandler)       // gets all chirps in database on GET /api/chirps
 	serveMux.HandleFunc(POST+API_CHIRPS, apiCfg.createChirpHandler)    // posts a new chirp with inbund validation on POST /api/chirps
+	serveMux.HandleFunc(GET+API_CHIRPS_ID, apiCfg.getChirpByIdHandler) // gets a specific chirp in database by id on GET /api/chirps/{chirpID}
 
 	serveMux.HandleFunc(GET+API_USERS, apiCfg.getUsersHandler)       // gets all users in database on GET /api/users
 	serveMux.HandleFunc(GET+API_USERS_ID, apiCfg.getUserByIdHandler) // gets a specific user in database by id on GET /api/users/{userID}
-	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler)    // creates a new user on POST /api/users
+	serveMux.HandleFunc(POST+API_LOGIN, apiCfg.loginUserHandler)
+	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler) // creates a new user on POST /api/users
 
 	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)  // get visitor count metrics on GET /admin/metrics
 	serveMux.HandleFunc(GET+API_RESET, apiCfg.metricsResetHandler) // resets visitor cound metrics on GET /api/reset

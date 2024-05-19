@@ -2,45 +2,77 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sort"
 	"strconv"
 
+	"github.com/Katalcha/go-chirpy/internal/auth"
+	"github.com/Katalcha/go-chirpy/internal/database"
 	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
+type User struct {
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"-"`
+}
+
 func (a *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := User{}
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	type response struct {
+		User
+	}
+
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&user)
+	params := parameters{}
+	err := decoder.Decode(&params)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not decode parameters")
 		return
 	}
 
-	newUser, err := a.DB.CreateUser(user.Email, user.Password)
+	hashedPassword, err := auth.HashPassword(params.Password)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Could not create user")
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not hash password")
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusCreated, User{
-		ID:    newUser.ID,
-		Email: newUser.Email,
+	user, err := a.DB.CreateUser(params.Email, hashedPassword)
+	if err != nil {
+		if errors.Is(err, database.ErrAlreadyExists) {
+			utils.RespondWithError(w, http.StatusConflict, "user already exists")
+			return
+		}
+
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not create user")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusCreated, response{
+		User: User{
+			ID:    user.ID,
+			Email: user.Email,
+		},
 	})
 }
 
-func (a *apiConfig) getUsersHandler(w http.ResponseWriter, _ *http.Request) {
+func (a *apiConfig) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	dbUsers, err := a.DB.GetUsers()
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Could not retrieve users from database")
+		utils.RespondWithError(w, http.StatusInternalServerError, "Could not get users from database")
 	}
 
-	users := []User{}
+	users := []database.User{}
 	for _, dbUser := range dbUsers {
-		users = append(users, User{
-			ID:    dbUser.ID,
-			Email: dbUser.Email,
+		users = append(users, database.User{
+			ID:             dbUser.ID,
+			Email:          dbUser.Email,
+			HashedPassword: dbUser.HashedPassword,
 		})
 	}
 
@@ -52,6 +84,10 @@ func (a *apiConfig) getUsersHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *apiConfig) getUserByIdHandler(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		User
+	}
+
 	const matchingPattern string = "userID"
 	userIDString := r.PathValue(matchingPattern)
 	userID, err := strconv.Atoi(userIDString)
@@ -66,8 +102,48 @@ func (a *apiConfig) getUserByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, User{
-		ID:    dbUser.ID,
-		Email: dbUser.Email,
+	utils.RespondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:    dbUser.ID,
+			Email: dbUser.Email,
+		},
+	})
+}
+
+func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	type response struct {
+		User
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not decode parameters")
+		return
+	}
+
+	user, err := a.DB.GetUserByEmail(params.Email)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not get user")
+		return
+	}
+
+	err = auth.CheckPasswordHash(params.Password, user.HashedPassword)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "invalid password")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:    user.ID,
+			Email: user.Email,
+		},
 	})
 }
