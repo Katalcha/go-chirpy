@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Katalcha/go-chirpy/internal/database"
+	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
 // SERVER CONFIG
@@ -44,7 +45,7 @@ func main() {
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 	if *dbg {
-		debugDeleteDatabase(FILE_DATABASE_PATH)
+		utils.DebugDeleteDatabase(FILE_DATABASE_PATH)
 	}
 
 	// reads or creates a ne DB ob server start, by checking for JSON-DB

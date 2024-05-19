@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"encoding/json"
@@ -11,7 +11,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
+func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -23,15 +27,15 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(data)
 }
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
+func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	if code > 499 {
 		log.Printf("Responding with 5xx error: %s", msg)
 	}
 	response := errorResponse{Error: msg}
-	respondWithJSON(w, code, response)
+	RespondWithJSON(w, code, response)
 }
 
-func replaceBadWords(inputString string, badWords map[string]struct{}) string {
+func ReplaceBadWords(inputString string, badWords map[string]struct{}) string {
 	splittedInput := strings.Split(inputString, " ")
 
 	for i, word := range splittedInput {
@@ -46,7 +50,7 @@ func replaceBadWords(inputString string, badWords map[string]struct{}) string {
 	return output
 }
 
-func validateChirp(body string) (string, error) {
+func ValidateChirp(body string) (string, error) {
 	const maxChirp int = 140
 	if len(body) > maxChirp {
 		return "", errors.New("Chirp is too long")
@@ -58,11 +62,11 @@ func validateChirp(body string) (string, error) {
 		"fornax":    {},
 	}
 
-	filtered := replaceBadWords(body, badWords)
+	filtered := ReplaceBadWords(body, badWords)
 	return filtered, nil
 }
 
-func debugDeleteDatabase(databasePath string) error {
+func DebugDeleteDatabase(databasePath string) error {
 	err := os.Remove(databasePath)
 	if err != nil {
 		return errors.New("no database to delete")
@@ -74,7 +78,7 @@ func debugDeleteDatabase(databasePath string) error {
 	return nil
 }
 
-func hashThisPw(pw string) ([]byte, error) {
+func HashThisPw(pw string) ([]byte, error) {
 	hashedPw, err := bcrypt.GenerateFromPassword([]byte(pw), 10)
 	if err != nil {
 		log.Printf("hashing password failed")

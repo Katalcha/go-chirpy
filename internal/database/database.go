@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync"
 	"syscall"
+
+	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
 var ErrNotExist = errors.New("resource does not exist")
@@ -32,8 +34,9 @@ type Chirp struct {
 // represents a User as part of the map of Users inside DB
 // a User consists of an ID int and an Email string
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password []byte `json:"password"`
 }
 
 /*
@@ -188,19 +191,23 @@ func (db *DB) GetUserByID(id int) (User, error) {
 
 // USER IN DB
 
-func (db *DB) CreateUser(email string) (User, error) {
+func (db *DB) CreateUser(email string, password string) (User, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
 		return User{}, err
 	}
 
+	pw, err := utils.HashThisPw(password)
+	if err != nil {
+		return User{}, err
+	}
 	id := len(dbStructure.Users) + 1
 	user := User{
-		ID:    id,
-		Email: email,
+		ID:       id,
+		Email:    email,
+		Password: pw,
 	}
 	dbStructure.Users[id] = user
-
 	err = db.writeDB(dbStructure)
 	if err != nil {
 		return User{}, err
