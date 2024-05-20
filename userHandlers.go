@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/Katalcha/go-chirpy/internal/auth"
 	"github.com/Katalcha/go-chirpy/internal/database"
@@ -65,6 +66,7 @@ func (a *apiConfig) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	dbUsers, err := a.DB.GetUsers()
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Could not get users from database")
+		return
 	}
 
 	users := []database.User{}
@@ -110,7 +112,7 @@ func (a *apiConfig) getUserByIdHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
+func (a *apiConfig) updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
@@ -118,6 +120,64 @@ func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	type response struct {
 		User
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "could not find jwt")
+		return
+	}
+
+	subject, err := auth.ValidateJWT(token, a.jwtSecret)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "could not validate jwt")
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err = decoder.Decode(&params)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not decode parameters")
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not hash password")
+		return
+	}
+
+	userIDInt, err := strconv.Atoi(subject)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not parse user id")
+		return
+	}
+
+	user, err := a.DB.UpdateUser(userIDInt, params.Email, hashedPassword)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not update user")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:    user.ID,
+			Email: user.Email,
+		},
+	})
+}
+
+func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password         string `json:"password"`
+		Email            string `json:"email"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
+	}
+
+	type response struct {
+		User
+		Token string `json:"token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -140,10 +200,24 @@ func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defaultExpiration := 60 * 60 * 24
+	if params.ExpiresInSeconds == 0 {
+		params.ExpiresInSeconds = defaultExpiration
+	} else if params.ExpiresInSeconds > defaultExpiration {
+		params.ExpiresInSeconds = defaultExpiration
+	}
+
+	token, err := auth.MakeJWT(user.ID, a.jwtSecret, time.Duration(params.ExpiresInSeconds)*time.Second)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not create jwt")
+		return
+	}
+
 	utils.RespondWithJSON(w, http.StatusOK, response{
 		User: User{
 			ID:    user.ID,
 			Email: user.Email,
 		},
+		Token: token,
 	})
 }
