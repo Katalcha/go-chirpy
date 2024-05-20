@@ -31,7 +31,9 @@ const (
 	API_USERS    string = "/api/users"
 	API_USERS_ID string = "/api/users/{userID}"
 
-	API_LOGIN string = "/api/login"
+	API_LOGIN   string = "/api/login"
+	API_REFRESH string = "/api/refresh"
+	API_REVOKE  string = "/api/revoke"
 
 	ADMIN_METRICS       string = "/admin/metrics"
 	ADMIN_METRICS_RESET string = "/admin/reset"
@@ -102,6 +104,8 @@ func main() {
 	serveMux.HandleFunc(POST+API_LOGIN, apiCfg.loginUserHandler)
 	serveMux.HandleFunc(POST+API_USERS, apiCfg.createUserHandler) // creates a new user on POST /api/users
 	serveMux.HandleFunc(PUT+API_USERS, apiCfg.updateUserHandler)
+	serveMux.HandleFunc(POST+API_REFRESH, apiCfg.refreshTokenHandler)
+	serveMux.HandleFunc(POST+API_REVOKE, apiCfg.revokeTokenHandler)
 
 	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)            // get visitor count metrics on GET /admin/metrics
 	serveMux.HandleFunc(GET+ADMIN_METRICS_RESET, apiCfg.metricsResetHandler) // resets visitor cound metrics on GET /api/reset
