@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Katalcha/go-chirpy/internal/auth"
 	"github.com/Katalcha/go-chirpy/internal/database"
 	"github.com/Katalcha/go-chirpy/internal/utils"
 )
@@ -17,9 +18,20 @@ func (a *apiConfig) webhookhandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "could not find api key")
+		return
+	}
+
+	if apiKey != a.polkaKey {
+		utils.RespondWithError(w, http.StatusUnauthorized, "api key is invalid")
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "could not decode parameters")
 		return
@@ -41,5 +53,5 @@ func (a *apiConfig) webhookhandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
 }

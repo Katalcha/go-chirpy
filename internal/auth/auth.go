@@ -13,7 +13,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TokenType string
+
+const (
+	TokenTypeAccess TokenType = "chirpy-access"
+)
+
 var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
+var ErrMalformedAuthorizationHeader = errors.New("malformed authorization header")
+var ErrInvalidUser = errors.New("invalid user")
 
 func HashPassword(password string) (string, error) {
 	data, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -62,7 +70,7 @@ func ValidateJWT(tokenString, tokenSecret string) (string, error) {
 	}
 
 	if issuer != string("chirpy") {
-		return "", errors.New("invalid issuer")
+		return "", ErrInvalidUser
 	}
 
 	return userIDString, nil
@@ -76,7 +84,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 	splitAuth := strings.Split(authHeader, " ")
 	if len(splitAuth) < 2 || splitAuth[0] != "Bearer" {
-		return "", errors.New("malformed authorization header")
+		return "", ErrMalformedAuthorizationHeader
 	}
 
 	return splitAuth[1], nil
@@ -89,4 +97,18 @@ func MakeRefreshToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(token), nil
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", ErrNoAuthHeaderIncluded
+	}
+
+	splitAuth := strings.Split(authHeader, " ")
+	if len(splitAuth) < 2 || splitAuth[0] != "ApiKey" {
+		return "", ErrMalformedAuthorizationHeader
+	}
+
+	return splitAuth[1], nil
 }
