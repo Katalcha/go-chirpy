@@ -41,9 +41,10 @@ const (
 
 // HTTP METHODS
 const (
-	GET  string = "GET "
-	POST string = "POST "
-	PUT  string = "PUT "
+	GET    string = "GET "
+	POST   string = "POST "
+	PUT    string = "PUT "
+	DELETE string = "DELETE "
 )
 
 // intern config struct to hold state
@@ -98,6 +99,7 @@ func main() {
 	serveMux.HandleFunc(GET+API_CHIRPS, apiCfg.getChirpsHandler)       // gets all chirps in database on GET /api/chirps
 	serveMux.HandleFunc(POST+API_CHIRPS, apiCfg.createChirpHandler)    // posts a new chirp with inbund validation on POST /api/chirps
 	serveMux.HandleFunc(GET+API_CHIRPS_ID, apiCfg.getChirpByIdHandler) // gets a specific chirp in database by id on GET /api/chirps/{chirpID}
+	serveMux.HandleFunc(DELETE+API_CHIRPS_ID, apiCfg.deleteChirpHandler)
 
 	serveMux.HandleFunc(GET+API_USERS, apiCfg.getUsersHandler)       // gets all users in database on GET /api/users
 	serveMux.HandleFunc(GET+API_USERS_ID, apiCfg.getUserByIdHandler) // gets a specific user in database by id on GET /api/users/{userID}
