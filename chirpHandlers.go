@@ -6,38 +6,63 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/Katalcha/go-chirpy/internal/auth"
 	"github.com/Katalcha/go-chirpy/internal/utils"
 )
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	AuthorID int    `json:"author_id"`
+	Body     string `json:"body"`
 }
 
-func (a *apiConfig) createChirpHandler(writer http.ResponseWriter, request *http.Request) {
-	chirp := Chirp{}
-	decoder := json.NewDecoder(request.Body)
-	err := decoder.Decode(&chirp)
+func (a *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Body string `json:"body"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		utils.RespondWithError(writer, http.StatusBadRequest, err.Error())
+		utils.RespondWithError(w, http.StatusUnauthorized, "could not find jwt")
 		return
 	}
 
-	filtered, err := utils.ValidateChirp(chirp.Body)
+	subject, err := auth.ValidateJWT(token, a.jwtSecret)
 	if err != nil {
-		utils.RespondWithError(writer, http.StatusBadRequest, err.Error())
+		utils.RespondWithError(w, http.StatusUnauthorized, "could not validate jwt")
 		return
 	}
 
-	newChirp, err := a.DB.CreateChirp(filtered)
+	userID, err := strconv.Atoi(subject)
 	if err != nil {
-		utils.RespondWithError(writer, http.StatusInternalServerError, "Could not create chirp")
+		utils.RespondWithError(w, http.StatusBadRequest, "coul not parse user id")
 		return
 	}
 
-	utils.RespondWithJSON(writer, http.StatusCreated, Chirp{
-		ID:   newChirp.ID,
-		Body: newChirp.Body,
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err = decoder.Decode(&params)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not decode parameters")
+		return
+	}
+
+	cleaned, err := utils.ValidateChirp(params.Body)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	chirp, err := a.DB.CreateChirp(cleaned, userID)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not create chirp")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusCreated, Chirp{
+		ID:       chirp.ID,
+		AuthorID: chirp.AuthorID,
+		Body:     chirp.Body,
 	})
 }
 
@@ -66,8 +91,9 @@ func (a *apiConfig) getChirpsHandler(writer http.ResponseWriter, _ *http.Request
 	chirps := []Chirp{}
 	for _, dbChirp := range dbChirps {
 		chirps = append(chirps, Chirp{
-			ID:   dbChirp.ID,
-			Body: dbChirp.Body,
+			ID:       dbChirp.ID,
+			AuthorID: dbChirp.AuthorID,
+			Body:     dbChirp.Body,
 		})
 	}
 
@@ -94,7 +120,8 @@ func (a *apiConfig) getChirpByIdHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, Chirp{
-		ID:   dbChirp.ID,
-		Body: dbChirp.Body,
+		ID:       dbChirp.ID,
+		AuthorID: dbChirp.AuthorID,
+		Body:     dbChirp.Body,
 	})
 }
