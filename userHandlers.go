@@ -14,9 +14,10 @@ import (
 )
 
 type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"-"`
+	ID          int    `json:"id"`
+	Email       string `json:"email"`
+	Password    string `json:"-"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 func (a *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,8 +57,9 @@ func (a *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusCreated, response{
 		User: User{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:          user.ID,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
 		},
 	})
 }
@@ -162,8 +164,9 @@ func (a *apiConfig) updateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusOK, response{
 		User: User{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:          user.ID,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
 		},
 	})
 }
@@ -224,8 +227,9 @@ func (a *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusOK, response{
 		User: User{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:          user.ID,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
 		},
 		Token:        accessToken,
 		RefreshToken: refreshToken,

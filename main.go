@@ -35,6 +35,8 @@ const (
 	API_REFRESH string = "/api/refresh"
 	API_REVOKE  string = "/api/revoke"
 
+	API_POLKA_WEBHOOKS string = "/api/polka/webhooks"
+
 	ADMIN_METRICS       string = "/admin/metrics"
 	ADMIN_METRICS_RESET string = "/admin/reset"
 )
@@ -108,6 +110,8 @@ func main() {
 	serveMux.HandleFunc(PUT+API_USERS, apiCfg.updateUserHandler)
 	serveMux.HandleFunc(POST+API_REFRESH, apiCfg.refreshTokenHandler)
 	serveMux.HandleFunc(POST+API_REVOKE, apiCfg.revokeTokenHandler)
+
+	serveMux.HandleFunc(POST+API_POLKA_WEBHOOKS, apiCfg.webhookhandler)
 
 	serveMux.HandleFunc(GET+ADMIN_METRICS, apiCfg.metricsHandler)            // get visitor count metrics on GET /admin/metrics
 	serveMux.HandleFunc(GET+ADMIN_METRICS_RESET, apiCfg.metricsResetHandler) // resets visitor cound metrics on GET /api/reset
