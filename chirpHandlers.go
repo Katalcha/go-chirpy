@@ -81,15 +81,29 @@ func (a *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 // 	return cleaned, nil
 // }
 
-func (a *apiConfig) getChirpsHandler(writer http.ResponseWriter, _ *http.Request) {
+func (a *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	dbChirps, err := a.DB.GetChirps()
 	if err != nil {
-		utils.RespondWithError(writer, http.StatusInternalServerError, "Could not retrieve chirps from database")
+		utils.RespondWithError(w, http.StatusInternalServerError, "could not retrieve chirps")
 		return
+	}
+
+	authorID := -1
+	authorIDString := r.URL.Query().Get("author_id")
+	if authorIDString != "" {
+		authorID, err = strconv.Atoi(authorIDString)
+		if err != nil {
+			utils.RespondWithError(w, http.StatusBadRequest, "invalid author id")
+			return
+		}
 	}
 
 	chirps := []Chirp{}
 	for _, dbChirp := range dbChirps {
+		if authorID != -1 && dbChirp.AuthorID != authorID {
+			continue
+		}
+
 		chirps = append(chirps, Chirp{
 			ID:       dbChirp.ID,
 			AuthorID: dbChirp.AuthorID,
@@ -101,7 +115,7 @@ func (a *apiConfig) getChirpsHandler(writer http.ResponseWriter, _ *http.Request
 		return chirps[i].ID < chirps[j].ID
 	})
 
-	utils.RespondWithJSON(writer, http.StatusOK, chirps)
+	utils.RespondWithJSON(w, http.StatusOK, chirps)
 }
 
 func (a *apiConfig) getChirpByIdHandler(w http.ResponseWriter, r *http.Request) {
